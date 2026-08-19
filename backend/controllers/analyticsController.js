@@ -7,6 +7,8 @@ const {
   getPreviousPeriodRevenue,
   calculateRevenueGrowthPercent,
   getSalesTrends: getSalesTrendRows,
+  getProductAnalysis: getProductAnalysisRows,
+  getCategoryAnalysis: getCategoryAnalysisRows,
 } = require("../services/analyticsService");
 
 const fillTrendBuckets = ({ startDate, endDate, groupBy, data }) => {
@@ -156,7 +158,79 @@ const getSalesTrends = async (req, res) => {
   }
 };
 
+const getProductAnalysis = async (req, res) => {
+  try {
+    const startDate = parseDate(req.query.startDate);
+    const endDate = parseDate(req.query.endDate);
+    const rawStatuses = req.query.status ?? req.query["status[]"];
+    const statuses = normalizeStatusFilter(rawStatuses);
+    const limit = Number.parseInt(req.query.limit || "10", 10);
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: "Invalid startDate or endDate" });
+    }
+
+    if (startDate >= endDate) {
+      return res.status(400).json({ message: "startDate must be before endDate" });
+    }
+
+    if (!Number.isInteger(limit) || limit < 1 || limit > 10) {
+      return res.status(400).json({ message: "Invalid limit. Use a value between 1 and 10." });
+    }
+
+    const statusCheck = validateStatusFilter(statuses);
+    if (!statusCheck.valid) {
+      return res.status(400).json({ message: statusCheck.message });
+    }
+
+    const payload = await getProductAnalysisRows({
+      startDate,
+      endDate,
+      statuses,
+      limit,
+    });
+
+    return res.status(200).json(payload);
+  } catch (error) {
+    return res.status(500).json({ message: error.message || "Failed to load product analysis" });
+  }
+};
+
+const getCategoryAnalysis = async (req, res) => {
+  try {
+    const startDate = parseDate(req.query.startDate);
+    const endDate = parseDate(req.query.endDate);
+    const rawStatuses = req.query.status ?? req.query["status[]"];
+    const statuses = normalizeStatusFilter(rawStatuses);
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: "Invalid startDate or endDate" });
+    }
+
+    if (startDate >= endDate) {
+      return res.status(400).json({ message: "startDate must be before endDate" });
+    }
+
+    const statusCheck = validateStatusFilter(statuses);
+    if (!statusCheck.valid) {
+      return res.status(400).json({ message: statusCheck.message });
+    }
+
+    const payload = await getCategoryAnalysisRows({
+      startDate,
+      endDate,
+      statuses,
+    });
+
+    return res.status(200).json(payload);
+  } catch (error) {
+    return res.status(500).json({ message: error.message || "Failed to load category analysis" });
+  }
+};
+
 module.exports = {
   getAnalyticsOverview,
   getSalesTrends,
+  getProductAnalysis,
+  getCategoryAnalysis,
 };

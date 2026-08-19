@@ -48,3 +48,49 @@ export const getSalesTrends = async ({
 
   return response.data;
 };
+
+export const getProductAnalysis = async ({
+  startDate,
+  endDate,
+  limit = 10,
+}) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.get(
+    `${API_URL}/products`,
+    {
+      params: {
+        startDate,
+        endDate,
+        limit,
+      },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};
+
+export const getCategoryAnalysis = async ({
+  startDate,
+  endDate,
+}) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.get(
+    `${API_URL}/categories`,
+    {
+      params: {
+        startDate,
+        endDate,
+      },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};

@@ -151,6 +151,140 @@ const buildTrendsPipeline = ({ startDate, endDate, statuses, groupBy }) => [
   { $sort: { date: 1 } },
 ];
 
+const buildProductsPipeline = ({ startDate, endDate, statuses, limit }) => [
+  { $match: buildMatchStage({ startDate, endDate, statuses }) },
+  { $unwind: "$items" },
+  {
+    $lookup: {
+      from: "menus",
+      localField: "items.menuItem",
+      foreignField: "_id",
+      as: "menuItem",
+    },
+  },
+  {
+    $unwind: {
+      path: "$menuItem",
+      preserveNullAndEmptyArrays: true,
+    },
+  },
+  {
+    $addFields: {
+      itemRevenue: {
+        $multiply: [
+          "$items.quantity",
+          {
+            $ifNull: [
+              "$items.price",
+              { $ifNull: ["$menuItem.price", 0] },
+            ],
+          },
+        ],
+      },
+      itemName: {
+        $ifNull: ["$items.name", "$menuItem.name"],
+      },
+    },
+  },
+  {
+    $group: {
+      _id: {
+        productId: "$items.menuItem",
+        productName: "$itemName",
+      },
+      unitsSold: { $sum: "$items.quantity" },
+      revenue: { $sum: "$itemRevenue" },
+    },
+  },
+  {
+    $group: {
+      _id: null,
+      totalRevenue: { $sum: "$revenue" },
+      products: {
+        $push: {
+          productId: "$_id.productId",
+          productName: "$_id.productName",
+          unitsSold: "$unitsSold",
+          revenue: "$revenue",
+        },
+      },
+    },
+  },
+  {
+    $project: {
+      _id: 0,
+      totalRevenue: 1,
+      products: 1,
+    },
+  },
+  { $limit: 1 },
+];
+
+const buildCategoriesPipeline = ({ startDate, endDate, statuses }) => [
+  { $match: buildMatchStage({ startDate, endDate, statuses }) },
+  { $unwind: "$items" },
+  {
+    $lookup: {
+      from: "menus",
+      localField: "items.menuItem",
+      foreignField: "_id",
+      as: "menuItem",
+    },
+  },
+  {
+    $unwind: {
+      path: "$menuItem",
+      preserveNullAndEmptyArrays: true,
+    },
+  },
+  {
+    $addFields: {
+      categoryName: {
+        $ifNull: ["$menuItem.category", "Uncategorized"],
+      },
+      itemRevenue: {
+        $multiply: [
+          "$items.quantity",
+          {
+            $ifNull: [
+              "$items.price",
+              { $ifNull: ["$menuItem.price", 0] },
+            ],
+          },
+        ],
+      },
+    },
+  },
+  {
+    $group: {
+      _id: "$categoryName",
+      unitsSold: { $sum: "$items.quantity" },
+      revenue: { $sum: "$itemRevenue" },
+    },
+  },
+  {
+    $group: {
+      _id: null,
+      totalRevenue: { $sum: "$revenue" },
+      categories: {
+        $push: {
+          category: "$_id",
+          unitsSold: "$unitsSold",
+          revenue: "$revenue",
+        },
+      },
+    },
+  },
+  {
+    $project: {
+      _id: 0,
+      totalRevenue: 1,
+      categories: 1,
+    },
+  },
+  { $limit: 1 },
+];
+
 const getOverviewMetrics = async ({ startDate, endDate, statuses }) => {
   const [result] = await Order.aggregate(
     buildOverviewPipeline({ startDate, endDate, statuses })
@@ -210,6 +344,50 @@ const getSalesTrends = async ({ startDate, endDate, statuses, groupBy }) => {
   return rows;
 };
 
+const getProductAnalysis = async ({ startDate, endDate, statuses, limit }) => {
+  const [result] = await Order.aggregate(
+    buildProductsPipeline({ startDate, endDate, statuses, limit })
+  );
+
+  const totalRevenue = result?.totalRevenue || 0;
+  const products = (result?.products || [])
+    .filter((product) => product.productId)
+    .map((product) => ({
+      productId: String(product.productId),
+      productName: product.productName || "Unknown Product",
+      unitsSold: product.unitsSold || 0,
+      revenue: product.revenue || 0,
+      revenueContributionPercent:
+        totalRevenue > 0 ? ((product.revenue || 0) / totalRevenue) * 100 : 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  return {
+    data: products.slice(0, limit),
+  };
+};
+
+const getCategoryAnalysis = async ({ startDate, endDate, statuses }) => {
+  const [result] = await Order.aggregate(
+    buildCategoriesPipeline({ startDate, endDate, statuses })
+  );
+
+  const totalRevenue = result?.totalRevenue || 0;
+  const categories = (result?.categories || [])
+    .map((category) => ({
+      category: category.category || "Uncategorized",
+      unitsSold: category.unitsSold || 0,
+      revenue: category.revenue || 0,
+      revenueContributionPercent:
+        totalRevenue > 0 ? ((category.revenue || 0) / totalRevenue) * 100 : 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  return {
+    data: categories,
+  };
+};
+
 module.exports = {
   parseDate,
   normalizeStatusFilter,
@@ -218,6 +396,8 @@ module.exports = {
   getPreviousPeriodRevenue,
   calculateRevenueGrowthPercent,
   getSalesTrends,
+  getProductAnalysis,
+  getCategoryAnalysis,
   ALLOWED_STATUSES,
   ALLOWED_GROUP_BY,
 };

@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
-import { getSalesOverview, getSalesTrends } from "../services/analyticsService";
+import {
+  getSalesOverview,
+  getSalesTrends,
+  getProductAnalysis,
+  getCategoryAnalysis,
+} from "../services/analyticsService";
 
 const formatDateInput = (date) =>
   date.toISOString().slice(0, 10);
@@ -41,6 +46,13 @@ function SalesAnalysis() {
   const [trendData, setTrendData] = useState([]);
   const [trendLoading, setTrendLoading] = useState(false);
   const [trendError, setTrendError] = useState("");
+  const [productLimit, setProductLimit] = useState(5);
+  const [productData, setProductData] = useState([]);
+  const [productLoading, setProductLoading] = useState(false);
+  const [productError, setProductError] = useState("");
+  const [categoryData, setCategoryData] = useState([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
+  const [categoryError, setCategoryError] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [submittedRange, setSubmittedRange] = useState(defaults);
@@ -84,25 +96,71 @@ function SalesAnalysis() {
     }
   };
 
+  const fetchProducts = async (range, limit) => {
+    setProductLoading(true);
+    setProductError("");
+    try {
+      const response = await getProductAnalysis({
+        ...range,
+        limit,
+      });
+      setProductData(response.data || []);
+    } catch (err) {
+      setProductError(
+        err.response?.data?.message ||
+          "Failed to load product analysis."
+      );
+      setProductData([]);
+    } finally {
+      setProductLoading(false);
+    }
+  };
+
+  const fetchCategories = async (range) => {
+    setCategoryLoading(true);
+    setCategoryError("");
+    try {
+      const response = await getCategoryAnalysis(range);
+      setCategoryData(response.data || []);
+    } catch (err) {
+      setCategoryError(
+        err.response?.data?.message ||
+          "Failed to load category analysis."
+      );
+      setCategoryData([]);
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       fetchOverview(defaults);
       fetchTrends(defaults, trendGroupBy);
+      fetchProducts(defaults, productLimit);
+      fetchCategories(defaults);
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, [defaults, trendGroupBy]);
+  }, [defaults, trendGroupBy, productLimit]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const range = { startDate, endDate };
     fetchOverview(range);
     fetchTrends(range, trendGroupBy);
+    fetchProducts(range, productLimit);
+    fetchCategories(range);
   };
 
   const handleGroupByChange = (groupBy) => {
     setTrendGroupBy(groupBy);
     fetchTrends({ startDate, endDate }, groupBy);
+  };
+
+  const handleProductLimitChange = (limit) => {
+    setProductLimit(limit);
+    fetchProducts({ startDate, endDate }, limit);
   };
 
   const isZeroState =
@@ -149,6 +207,10 @@ function SalesAnalysis() {
     ...trendData.map((row) => Number(row.orders || 0))
   );
   const trendEmpty = !trendLoading && !trendError && trendData.length === 0;
+  const productEmpty = !productLoading && !productError && productData.length === 0;
+  const categoryEmpty = !categoryLoading && !categoryError && categoryData.length === 0;
+  const bestCategory = categoryData[0] || null;
+  const lowestCategory = categoryData[categoryData.length - 1] || null;
 
   const formatTrendLabel = (value) => {
     if (trendGroupBy === "month") {
@@ -591,9 +653,138 @@ function SalesAnalysis() {
             </div>
           )}
         </div>
+
+        <div className="trend-card">
+          <div className="trend-header">
+            <h2 className="trend-title">Category Analysis</h2>
+          </div>
+
+          {categoryLoading ? (
+            <div className="loading">Loading category analysis...</div>
+          ) : categoryError ? (
+            <div className="error">{categoryError}</div>
+          ) : categoryEmpty ? (
+            <div className="empty">No category sales found for the selected range.</div>
+          ) : (
+            <>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "16px",
+                  marginBottom: "18px",
+                }}
+              >
+                <div className="kpi-card">
+                  <p className="kpi-label">Best-performing category</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {bestCategory?.category || "N/A"}
+                  </p>
+                </div>
+                <div className="kpi-card">
+                  <p className="kpi-label">Lowest-performing category</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {lowestCategory?.category || "N/A"}
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th style={tableHeadStyle}>Category</th>
+                      <th style={tableHeadStyle}>Units Sold</th>
+                      <th style={tableHeadStyle}>Revenue</th>
+                      <th style={tableHeadStyle}>Revenue Contribution %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {categoryData.map((category) => (
+                      <tr key={category.category}>
+                        <td style={tableCellStyle}>{category.category}</td>
+                        <td style={tableCellStyle}>{formatNumber(category.unitsSold)}</td>
+                        <td style={tableCellStyle}>{formatCurrency(category.revenue)}</td>
+                        <td style={tableCellStyle}>
+                          {formatPercent(category.revenueContributionPercent)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="trend-card">
+          <div className="trend-header">
+            <h2 className="trend-title">Product Analysis</h2>
+            <div className="trend-selector">
+              {[5, 10].map((limit) => (
+                <button
+                  key={limit}
+                  type="button"
+                  className={productLimit === limit ? "active" : ""}
+                  onClick={() => handleProductLimitChange(limit)}
+                >
+                  Top {limit}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {productLoading ? (
+            <div className="loading">Loading product analysis...</div>
+          ) : productError ? (
+            <div className="error">{productError}</div>
+          ) : productEmpty ? (
+            <div className="empty">No product sales found for the selected range.</div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={tableHeadStyle}>Product Name</th>
+                    <th style={tableHeadStyle}>Units Sold</th>
+                    <th style={tableHeadStyle}>Revenue</th>
+                    <th style={tableHeadStyle}>Revenue Contribution %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productData.map((product) => (
+                    <tr key={product.productId}>
+                      <td style={tableCellStyle}>{product.productName}</td>
+                      <td style={tableCellStyle}>{formatNumber(product.unitsSold)}</td>
+                      <td style={tableCellStyle}>{formatCurrency(product.revenue)}</td>
+                      <td style={tableCellStyle}>
+                        {formatPercent(product.revenueContributionPercent)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
 }
+
+const tableHeadStyle = {
+  textAlign: "left",
+  padding: "12px 14px",
+  borderBottom: "1px solid #e2e8f0",
+  color: "#475569",
+  fontSize: "13px",
+  textTransform: "uppercase",
+};
+
+const tableCellStyle = {
+  padding: "14px",
+  borderBottom: "1px solid #e2e8f0",
+  color: "#0f172a",
+};
 
 export default SalesAnalysis;
