@@ -12,6 +12,7 @@ const cartRoutes = require("./routes/cartRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const tableRoutes = require("./routes/tableRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const v1Routes = require("./routes/v1");
 
 connectDB();
 
@@ -27,6 +28,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/tables", tableRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/v1", v1Routes);
 
 app.get("/", (req, res) => {
   res.send("Canteen Management API Running...");

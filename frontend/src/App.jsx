@@ -14,6 +14,7 @@ import AdminOrders from "./pages/AdminOrders";
 import AdminBookings from "./pages/AdminBookings";
 import AdminMenu from "./pages/AdminMenu";
 import AdminPayments from "./pages/AdminPayments";
+import SalesAnalysis from "./pages/SalesAnalysis";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
@@ -114,6 +115,15 @@ function App() {
           element={
             <AdminRoute>
               <AdminPayments />
+            </AdminRoute>
+          }
+        />
+
+        <Route
+          path="/admin/sales-analysis"
+          element={
+            <AdminRoute>
+              <SalesAnalysis />
             </AdminRoute>
           }
         />

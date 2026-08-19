@@ -271,6 +271,10 @@ function Navbar() {
               Payments
             </NavLink>
 
+            <NavLink to="/admin/sales-analysis" className={getLinkClass}>
+              Sales Analysis
+            </NavLink>
+
             <NavLink to="/menu" className={getLinkClass}>
               Menu
             </NavLink>
