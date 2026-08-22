@@ -94,3 +94,95 @@ export const getCategoryAnalysis = async ({
 
   return response.data;
 };
+
+export const getCustomerAnalysis = async ({
+  startDate,
+  endDate,
+  limit = 10,
+}) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.get(
+    `${API_URL}/customers`,
+    {
+      params: {
+        startDate,
+        endDate,
+        limit,
+      },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};
+
+export const getTimeAnalysis = async ({
+  startDate,
+  endDate,
+}) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.get(
+    `${API_URL}/time-analysis`,
+    {
+      params: {
+        startDate,
+        endDate,
+      },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};
+
+export const getOperationsPayments = async ({
+  startDate,
+  endDate,
+}) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.get(
+    `${API_URL}/operations-payments`,
+    {
+      params: {
+        startDate,
+        endDate,
+      },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};
+
+export const askAiAnalysis = async ({
+  question,
+  startDate,
+  endDate,
+}) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.post(
+    `${API_URL}/ai-analysis`,
+    {
+      question,
+      startDate,
+      endDate,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};

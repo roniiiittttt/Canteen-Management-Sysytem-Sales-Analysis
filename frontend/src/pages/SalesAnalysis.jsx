@@ -5,6 +5,10 @@ import {
   getSalesTrends,
   getProductAnalysis,
   getCategoryAnalysis,
+  getCustomerAnalysis,
+  getTimeAnalysis,
+  getOperationsPayments,
+  askAiAnalysis,
 } from "../services/analyticsService";
 
 const formatDateInput = (date) =>
@@ -53,6 +57,21 @@ function SalesAnalysis() {
   const [categoryData, setCategoryData] = useState([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [categoryError, setCategoryError] = useState("");
+  const [customerLimit, setCustomerLimit] = useState(5);
+  const [customerSummary, setCustomerSummary] = useState(null);
+  const [customerData, setCustomerData] = useState([]);
+  const [customerLoading, setCustomerLoading] = useState(false);
+  const [customerError, setCustomerError] = useState("");
+  const [timeData, setTimeData] = useState(null);
+  const [timeLoading, setTimeLoading] = useState(false);
+  const [timeError, setTimeError] = useState("");
+  const [operationsPaymentsData, setOperationsPaymentsData] = useState(null);
+  const [operationsPaymentsLoading, setOperationsPaymentsLoading] = useState(false);
+  const [operationsPaymentsError, setOperationsPaymentsError] = useState("");
+  const [aiQuestion, setAiQuestion] = useState("");
+  const [aiAnswer, setAiAnswer] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [submittedRange, setSubmittedRange] = useState(defaults);
@@ -133,16 +152,106 @@ function SalesAnalysis() {
     }
   };
 
+  const fetchCustomers = async (range, limit) => {
+    setCustomerLoading(true);
+    setCustomerError("");
+    try {
+      const response = await getCustomerAnalysis({
+        ...range,
+        limit,
+      });
+      setCustomerSummary(response.summary || null);
+      setCustomerData(response.topCustomers || []);
+    } catch (err) {
+      setCustomerError(
+        err.response?.data?.message ||
+          "Failed to load customer analysis."
+      );
+      setCustomerSummary(null);
+      setCustomerData([]);
+    } finally {
+      setCustomerLoading(false);
+    }
+  };
+
+  const fetchTimeAnalysis = async (range) => {
+    setTimeLoading(true);
+    setTimeError("");
+    try {
+      const response = await getTimeAnalysis(range);
+      setTimeData(response || null);
+    } catch (err) {
+      setTimeError(
+        err.response?.data?.message ||
+          "Failed to load time analysis."
+      );
+      setTimeData(null);
+    } finally {
+      setTimeLoading(false);
+    }
+  };
+
+  const fetchOperationsPayments = async (range) => {
+    setOperationsPaymentsLoading(true);
+    setOperationsPaymentsError("");
+    try {
+      const response = await getOperationsPayments(range);
+      setOperationsPaymentsData(response || null);
+    } catch (err) {
+      setOperationsPaymentsError(
+        err.response?.data?.message ||
+          "Failed to load operations and payment analytics."
+      );
+      setOperationsPaymentsData(null);
+    } finally {
+      setOperationsPaymentsLoading(false);
+    }
+  };
+
+  const handleAskAi = async (question) => {
+    const query = typeof question === "string" ? question.trim() : aiQuestion.trim();
+
+    if (!query) {
+      setAiError("Please enter a question.");
+      setAiAnswer("");
+      return;
+    }
+
+    setAiLoading(true);
+    setAiError("");
+
+    try {
+      const response = await askAiAnalysis({
+        question: query,
+        startDate,
+        endDate,
+      });
+      setAiAnswer(response.answer || "");
+      setAiQuestion(query);
+    } catch (err) {
+      setAiError(
+        err.response?.data?.message ||
+          "Failed to generate AI analysis."
+      );
+      setAiAnswer("");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       fetchOverview(defaults);
       fetchTrends(defaults, trendGroupBy);
       fetchProducts(defaults, productLimit);
       fetchCategories(defaults);
+      fetchCustomers(defaults, customerLimit);
+      fetchTimeAnalysis(defaults);
+      fetchOperationsPayments(defaults);
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, [defaults, trendGroupBy, productLimit]);
+  }, [defaults, trendGroupBy, productLimit, customerLimit]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -151,6 +260,9 @@ function SalesAnalysis() {
     fetchTrends(range, trendGroupBy);
     fetchProducts(range, productLimit);
     fetchCategories(range);
+    fetchCustomers(range, customerLimit);
+    fetchTimeAnalysis(range);
+    fetchOperationsPayments(range);
   };
 
   const handleGroupByChange = (groupBy) => {
@@ -161,6 +273,11 @@ function SalesAnalysis() {
   const handleProductLimitChange = (limit) => {
     setProductLimit(limit);
     fetchProducts({ startDate, endDate }, limit);
+  };
+
+  const handleCustomerLimitChange = (limit) => {
+    setCustomerLimit(limit);
+    fetchCustomers({ startDate, endDate }, limit);
   };
 
   const isZeroState =
@@ -209,8 +326,28 @@ function SalesAnalysis() {
   const trendEmpty = !trendLoading && !trendError && trendData.length === 0;
   const productEmpty = !productLoading && !productError && productData.length === 0;
   const categoryEmpty = !categoryLoading && !categoryError && categoryData.length === 0;
+  const customerEmpty = !customerLoading && !customerError && customerData.length === 0;
   const bestCategory = categoryData[0] || null;
   const lowestCategory = categoryData[categoryData.length - 1] || null;
+  const hourOrder = Array.from({ length: 24 }, (_, hour) => hour);
+  const dayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const maxHourlyOrders = Math.max(1, ...(timeData?.hourly || []).map((row) => Number(row.orders || 0)));
+  const maxHourlyRevenue = Math.max(1, ...(timeData?.hourly || []).map((row) => Number(row.revenue || 0)));
+  const getDayRow = (day) => (timeData?.daily || []).find((row) => row.day === day) || { orders: 0, revenue: 0 };
+  const operationsSummary = operationsPaymentsData?.operations || null;
+  const paymentsSummary = operationsPaymentsData?.payments || null;
+  const operationsPaymentsEmpty =
+    !operationsPaymentsLoading &&
+    !operationsPaymentsError &&
+    !operationsPaymentsData;
+  const hasPaymentMethods = (paymentsSummary?.byMethod || []).length > 0;
+  const exampleQuestions = [
+    "Why did sales decrease?",
+    "What are the best-selling products?",
+    "How is category performance looking?",
+    "Which hours or days are busiest?",
+    "Give me an operations and payment summary.",
+  ];
 
   const formatTrendLabel = (value) => {
     if (trendGroupBy === "month") {
@@ -651,6 +788,428 @@ function SalesAnalysis() {
                 </div>
               </div>
             </div>
+          )}
+        </div>
+
+        <div className="trend-card">
+          <div className="trend-header">
+            <h2 className="trend-title">Time Analysis</h2>
+          </div>
+
+          {timeLoading ? (
+            <div className="loading">Loading time analysis...</div>
+          ) : timeError ? (
+            <div className="error">{timeError}</div>
+          ) : !timeData ? (
+            <div className="empty">No time analysis available for the selected range.</div>
+          ) : (
+            <>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "16px",
+                  marginBottom: "18px",
+                }}
+              >
+                <div className="kpi-card">
+                  <p className="kpi-label">Peak Hour</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {`${String(timeData.peakHour?.hour ?? 0).padStart(2, "0")}:00`}
+                  </p>
+                  <p className="kpi-label" style={{ marginTop: "8px", textTransform: "none" }}>
+                    {formatNumber(timeData.peakHour?.orders || 0)} orders
+                  </p>
+                </div>
+                <div className="kpi-card">
+                  <p className="kpi-label">Peak Day</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {timeData.peakDay?.day || "Monday"}
+                  </p>
+                  <p className="kpi-label" style={{ marginTop: "8px", textTransform: "none" }}>
+                    {formatNumber(timeData.peakDay?.orders || 0)} orders
+                  </p>
+                </div>
+              </div>
+
+              <div className="trend-grid">
+                <div className="trend-panel">
+                  <h3>Orders by Hour</h3>
+                  <div className="trend-bars" style={{ flexDirection: "column", alignItems: "stretch", minHeight: "auto" }}>
+                    {hourOrder.map((hour) => {
+                      const row = (timeData.hourly || []).find((item) => item.hour === hour) || { orders: 0 };
+                      const width = (Number(row.orders || 0) / maxHourlyOrders) * 100;
+                      return (
+                        <div key={`hour-orders-${hour}`} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <div style={{ width: "54px", color: "#475569", fontSize: "12px", fontWeight: 700 }}>
+                            {String(hour).padStart(2, "0")}:00
+                          </div>
+                          <div style={{ flex: 1, background: "#e2e8f0", borderRadius: "999px", overflow: "hidden" }}>
+                            <div style={{ width: `${Math.max(width, 3)}%`, background: "linear-gradient(90deg, #ef4444, #dc2626)", height: "16px", borderRadius: "999px" }} />
+                          </div>
+                          <div style={{ width: "28px", textAlign: "right", fontSize: "12px", color: "#0f172a", fontWeight: 700 }}>
+                            {formatNumber(row.orders || 0)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="trend-panel">
+                  <h3>Revenue by Hour</h3>
+                  <div className="trend-bars" style={{ flexDirection: "column", alignItems: "stretch", minHeight: "auto" }}>
+                    {hourOrder.map((hour) => {
+                      const row = (timeData.hourly || []).find((item) => item.hour === hour) || { revenue: 0 };
+                      const width = (Number(row.revenue || 0) / maxHourlyRevenue) * 100;
+                      return (
+                        <div key={`hour-revenue-${hour}`} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <div style={{ width: "54px", color: "#475569", fontSize: "12px", fontWeight: 700 }}>
+                            {String(hour).padStart(2, "0")}:00
+                          </div>
+                          <div style={{ flex: 1, background: "#e2e8f0", borderRadius: "999px", overflow: "hidden" }}>
+                            <div style={{ width: `${Math.max(width, 3)}%`, background: "linear-gradient(90deg, #10b981, #059669)", height: "16px", borderRadius: "999px" }} />
+                          </div>
+                          <div style={{ width: "72px", textAlign: "right", fontSize: "12px", color: "#0f172a", fontWeight: 700 }}>
+                            {formatCurrency(row.revenue || 0)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="trend-panel" style={{ marginTop: "18px" }}>
+                <h3>Orders / Revenue by Day</h3>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr>
+                        <th style={tableHeadStyle}>Day</th>
+                        <th style={tableHeadStyle}>Orders</th>
+                        <th style={tableHeadStyle}>Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dayOrder.map((day) => {
+                        const row = getDayRow(day);
+                        return (
+                          <tr key={day}>
+                            <td style={tableCellStyle}>{day}</td>
+                            <td style={tableCellStyle}>{formatNumber(row.orders || 0)}</td>
+                            <td style={tableCellStyle}>{formatCurrency(row.revenue || 0)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="trend-card">
+          <div className="trend-header">
+            <h2 className="trend-title">Operations & Payments</h2>
+          </div>
+
+          {operationsPaymentsLoading ? (
+            <div className="loading">Loading operations and payment analytics...</div>
+          ) : operationsPaymentsError ? (
+            <div className="error">{operationsPaymentsError}</div>
+          ) : operationsPaymentsEmpty ? (
+            <div className="empty">No operations or payment data found for the selected range.</div>
+          ) : (
+            <>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "16px",
+                  marginBottom: "18px",
+                }}
+              >
+                <div className="kpi-card">
+                  <p className="kpi-label">Completed Orders</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {formatNumber(operationsSummary?.completedOrders || 0)}
+                  </p>
+                </div>
+                <div className="kpi-card">
+                  <p className="kpi-label">Pending Orders</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {formatNumber(operationsSummary?.pendingOrders || 0)}
+                  </p>
+                </div>
+                <div className="kpi-card">
+                  <p className="kpi-label">Preparing Orders</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {formatNumber(operationsSummary?.preparingOrders || 0)}
+                  </p>
+                </div>
+                <div className="kpi-card">
+                  <p className="kpi-label">Ready Orders</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {formatNumber(operationsSummary?.readyOrders || 0)}
+                  </p>
+                </div>
+                <div className="kpi-card">
+                  <p className="kpi-label">Cancelled Orders</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {operationsSummary?.cancelledOrders == null
+                      ? "Not available"
+                      : formatNumber(operationsSummary?.cancelledOrders || 0)}
+                  </p>
+                </div>
+                <div className="kpi-card">
+                  <p className="kpi-label">Completion Rate</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {formatPercent(operationsSummary?.completionRate || 0)}
+                  </p>
+                </div>
+                <div className="kpi-card">
+                  <p className="kpi-label">Cancellation Rate</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {operationsSummary?.cancellationRate == null
+                      ? "Not available"
+                      : formatPercent(operationsSummary?.cancellationRate || 0)}
+                  </p>
+                </div>
+                <div className="kpi-card">
+                  <p className="kpi-label">Total Revenue</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {formatCurrency(paymentsSummary?.totalRevenue || 0)}
+                  </p>
+                </div>
+                <div className="kpi-card">
+                  <p className="kpi-label">Successful Payments</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {formatNumber(paymentsSummary?.successfulPayments || 0)}
+                  </p>
+                </div>
+                <div className="kpi-card">
+                  <p className="kpi-label">Pending Payments</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {formatNumber(paymentsSummary?.pendingPayments || 0)}
+                  </p>
+                </div>
+                <div className="kpi-card">
+                  <p className="kpi-label">Failed Payments</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {paymentsSummary?.failedPayments == null
+                      ? "Not available"
+                      : formatNumber(paymentsSummary?.failedPayments || 0)}
+                  </p>
+                </div>
+                <div className="kpi-card">
+                  <p className="kpi-label">Payment Success Rate</p>
+                  <p className="kpi-value" style={{ fontSize: "22px" }}>
+                    {formatPercent(paymentsSummary?.paymentSuccessRate || 0)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="trend-panel">
+                <h3>Revenue by Payment Method</h3>
+                <div style={{ overflowX: "auto" }}>
+                  {hasPaymentMethods ? (
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>
+                          <th style={tableHeadStyle}>Method</th>
+                          <th style={tableHeadStyle}>Orders</th>
+                          <th style={tableHeadStyle}>Revenue</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(paymentsSummary?.byMethod || []).map((method) => (
+                          <tr key={method.method}>
+                            <td style={tableCellStyle}>{method.method}</td>
+                            <td style={tableCellStyle}>{formatNumber(method.orders)}</td>
+                            <td style={tableCellStyle}>{formatCurrency(method.revenue)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="empty" style={{ margin: 0 }}>
+                      No payment-method data found for the selected range.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="trend-card">
+          <div className="trend-header">
+            <h2 className="trend-title">AI Business Analyst</h2>
+          </div>
+
+          <div style={{ display: "grid", gap: "14px" }}>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAskAi();
+              }}
+              style={{ display: "grid", gap: "12px" }}
+            >
+              <div className="field" style={{ minWidth: 0 }}>
+                <label htmlFor="aiQuestion">Ask a question</label>
+                <textarea
+                  id="aiQuestion"
+                  value={aiQuestion}
+                  onChange={(e) => setAiQuestion(e.target.value)}
+                  rows={4}
+                  placeholder="Ask about sales, products, customers, peak hours, or operations."
+                  style={{
+                    width: "100%",
+                    padding: "12px 14px",
+                    borderRadius: "12px",
+                    border: "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    color: "#0f172a",
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
+                    resize: "vertical",
+                  }}
+                />
+              </div>
+
+              <div className="trend-selector" style={{ flexWrap: "wrap" }}>
+                {exampleQuestions.map((question) => (
+                  <button
+                    key={question}
+                    type="button"
+                    onClick={() => {
+                      setAiQuestion(question);
+                      handleAskAi(question);
+                    }}
+                    style={{ fontSize: "12px" }}
+                  >
+                    {question}
+                  </button>
+                ))}
+              </div>
+
+              <button className="apply-btn" type="submit" disabled={aiLoading}>
+                {aiLoading ? "Thinking..." : "Ask"}
+              </button>
+            </form>
+
+            {aiLoading ? (
+              <div className="loading">Generating AI answer...</div>
+            ) : aiError ? (
+              <div className="error">{aiError}</div>
+            ) : aiAnswer ? (
+              <div
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "16px",
+                  padding: "18px",
+                  color: "#0f172a",
+                  lineHeight: 1.6,
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {aiAnswer}
+              </div>
+            ) : (
+              <div className="empty" style={{ margin: 0 }}>
+                Ask a question to get a concise business answer from the current analytics data.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="trend-card">
+          <div className="trend-header">
+            <h2 className="trend-title">Customer Analysis</h2>
+            <div className="trend-selector">
+              {[5, 10].map((limit) => (
+                <button
+                  key={limit}
+                  type="button"
+                  className={customerLimit === limit ? "active" : ""}
+                  onClick={() => handleCustomerLimitChange(limit)}
+                >
+                  Top {limit}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {customerLoading ? (
+            <div className="loading">Loading customer analysis...</div>
+          ) : customerError ? (
+            <div className="error">{customerError}</div>
+          ) : customerEmpty ? (
+            <div className="empty">No customer activity found for the selected range.</div>
+          ) : (
+            <>
+              {customerSummary && (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                    gap: "16px",
+                    marginBottom: "18px",
+                  }}
+                >
+                  <div className="kpi-card">
+                    <p className="kpi-label">Total Customers</p>
+                    <p className="kpi-value" style={{ fontSize: "22px" }}>
+                      {formatNumber(customerSummary.totalCustomers)}
+                    </p>
+                  </div>
+                  <div className="kpi-card">
+                    <p className="kpi-label">New Customers</p>
+                    <p className="kpi-value" style={{ fontSize: "22px" }}>
+                      {formatNumber(customerSummary.newCustomers)}
+                    </p>
+                  </div>
+                  <div className="kpi-card">
+                    <p className="kpi-label">Returning Customers</p>
+                    <p className="kpi-value" style={{ fontSize: "22px" }}>
+                      {formatNumber(customerSummary.returningCustomers)}
+                    </p>
+                  </div>
+                  <div className="kpi-card">
+                    <p className="kpi-label">Average Customer Spend</p>
+                    <p className="kpi-value" style={{ fontSize: "22px" }}>
+                      {formatCurrency(customerSummary.averageCustomerSpend)}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th style={tableHeadStyle}>Customer</th>
+                      <th style={tableHeadStyle}>Orders</th>
+                      <th style={tableHeadStyle}>Total Spend</th>
+                      <th style={tableHeadStyle}>Average Order Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customerData.map((customer) => (
+                      <tr key={customer.customerId}>
+                        <td style={tableCellStyle}>{customer.customerName}</td>
+                        <td style={tableCellStyle}>{formatNumber(customer.orders)}</td>
+                        <td style={tableCellStyle}>{formatCurrency(customer.totalSpend)}</td>
+                        <td style={tableCellStyle}>{formatCurrency(customer.averageOrderValue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 

@@ -9,6 +9,10 @@ const {
   getSalesTrends: getSalesTrendRows,
   getProductAnalysis: getProductAnalysisRows,
   getCategoryAnalysis: getCategoryAnalysisRows,
+  getCustomerAnalysis: getCustomerAnalysisRows,
+  getTimeAnalysis: getTimeAnalysisRows,
+  getOperationsPaymentsAnalysis: getOperationsPaymentsAnalysisRows,
+  getAiAnalysis: getAiAnalysisRows,
 } = require("../services/analyticsService");
 
 const fillTrendBuckets = ({ startDate, endDate, groupBy, data }) => {
@@ -228,9 +232,142 @@ const getCategoryAnalysis = async (req, res) => {
   }
 };
 
+const getCustomerAnalysis = async (req, res) => {
+  try {
+    const startDate = parseDate(req.query.startDate);
+    const endDate = parseDate(req.query.endDate);
+    const rawStatuses = req.query.status ?? req.query["status[]"];
+    const statuses = normalizeStatusFilter(rawStatuses);
+    const limit = Number.parseInt(req.query.limit || "10", 10);
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: "Invalid startDate or endDate" });
+    }
+
+    if (startDate >= endDate) {
+      return res.status(400).json({ message: "startDate must be before endDate" });
+    }
+
+    if (!Number.isInteger(limit) || limit < 1 || limit > 10) {
+      return res.status(400).json({ message: "Invalid limit. Use a value between 1 and 10." });
+    }
+
+    const statusCheck = validateStatusFilter(statuses);
+    if (!statusCheck.valid) {
+      return res.status(400).json({ message: statusCheck.message });
+    }
+
+    const payload = await getCustomerAnalysisRows({
+      startDate,
+      endDate,
+      statuses,
+      limit,
+    });
+
+    return res.status(200).json(payload);
+  } catch (error) {
+    return res.status(500).json({ message: error.message || "Failed to load customer analysis" });
+  }
+};
+
+const getTimeAnalysis = async (req, res) => {
+  try {
+    const startDate = parseDate(req.query.startDate);
+    const endDate = parseDate(req.query.endDate);
+    const rawStatuses = req.query.status ?? req.query["status[]"];
+    const statuses = normalizeStatusFilter(rawStatuses);
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: "Invalid startDate or endDate" });
+    }
+
+    if (startDate >= endDate) {
+      return res.status(400).json({ message: "startDate must be before endDate" });
+    }
+
+    const statusCheck = validateStatusFilter(statuses);
+    if (!statusCheck.valid) {
+      return res.status(400).json({ message: statusCheck.message });
+    }
+
+    const payload = await getTimeAnalysisRows({
+      startDate,
+      endDate,
+      statuses,
+    });
+
+    return res.status(200).json(payload);
+  } catch (error) {
+    return res.status(500).json({ message: error.message || "Failed to load time analysis" });
+  }
+};
+
+const getOperationsPayments = async (req, res) => {
+  try {
+    const startDate = parseDate(req.query.startDate);
+    const endDate = parseDate(req.query.endDate);
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: "Invalid startDate or endDate" });
+    }
+
+    if (startDate >= endDate) {
+      return res.status(400).json({ message: "startDate must be before endDate" });
+    }
+
+    const payload = await getOperationsPaymentsAnalysisRows({
+      startDate,
+      endDate,
+    });
+
+    return res.status(200).json(payload);
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message || "Failed to load operations and payment analytics",
+    });
+  }
+};
+
+const getAiAnalysis = async (req, res) => {
+  try {
+    const question = typeof req.body?.question === "string" ? req.body.question.trim() : "";
+
+    if (!question) {
+      return res.status(400).json({ message: "Question is required." });
+    }
+
+    const startDate = parseDate(req.body?.startDate || req.query.startDate);
+    const endDate = parseDate(req.body?.endDate || req.query.endDate);
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: "Invalid startDate or endDate" });
+    }
+
+    if (startDate >= endDate) {
+      return res.status(400).json({ message: "startDate must be before endDate" });
+    }
+
+    const payload = await getAiAnalysisRows({
+      question,
+      startDate,
+      endDate,
+    });
+
+    return res.status(200).json(payload);
+  } catch (error) {
+    return res.status(502).json({
+      message: error.message || "Failed to generate AI analysis",
+    });
+  }
+};
+
 module.exports = {
   getAnalyticsOverview,
   getSalesTrends,
   getProductAnalysis,
   getCategoryAnalysis,
+  getCustomerAnalysis,
+  getTimeAnalysis,
+  getOperationsPayments,
+  getAiAnalysis,
 };
