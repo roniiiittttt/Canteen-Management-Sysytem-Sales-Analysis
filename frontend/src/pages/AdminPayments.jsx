@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Navbar from "../components/Navbar";
+import API_BASE_URL from "../config/api";
 
 function AdminPayments() {
   const [payments, setPayments] = useState([]);
@@ -15,7 +16,7 @@ function AdminPayments() {
       const token = localStorage.getItem("token");
 
       const response = await axios.get(
-        "http://localhost:5000/api/orders/payments",
+        `${API_BASE_URL}/api/orders/payments`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

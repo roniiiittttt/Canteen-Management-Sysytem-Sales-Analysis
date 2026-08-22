@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Navbar from "../components/Navbar";
+import API_BASE_URL from "../config/api";
 
 function AdminOrders() {
   const [orders, setOrders] = useState([]);
@@ -19,7 +20,7 @@ function AdminOrders() {
       const token = localStorage.getItem("token");
 
       const response = await axios.get(
-        "http://localhost:5000/api/orders",
+        `${API_BASE_URL}/api/orders`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -51,7 +52,7 @@ function AdminOrders() {
       const token = localStorage.getItem("token");
 
       await axios.put(
-        `http://localhost:5000/api/orders/${id}`,
+        `${API_BASE_URL}/api/orders/${id}`,
         { status },
         {
           headers: {

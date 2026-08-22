@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Navbar from "../components/Navbar";
+import API_BASE_URL from "../config/api";
 
 function AdminBookings() {
   const [bookings, setBookings] = useState([]);
@@ -19,7 +20,7 @@ function AdminBookings() {
       const token = localStorage.getItem("token");
 
       const response = await axios.get(
-        "http://localhost:5000/api/tables",
+        `${API_BASE_URL}/api/tables`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -51,7 +52,7 @@ function AdminBookings() {
       const token = localStorage.getItem("token");
 
       await axios.put(
-        `http://localhost:5000/api/tables/${id}`,
+        `${API_BASE_URL}/api/tables/${id}`,
         { status },
         {
           headers: {

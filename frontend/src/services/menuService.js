@@ -1,6 +1,7 @@
 import axios from "axios";
+import API_BASE_URL from "../config/api";
 
-const API_URL = "http://localhost:5000/api/menu";
+const API_URL = `${API_BASE_URL}/api/menu`;
 
 export const getMenuItems = async () => {
   const response = await axios.get(API_URL);

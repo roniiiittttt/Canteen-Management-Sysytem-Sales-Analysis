@@ -2,15 +2,6 @@ const Order = require("../models/Order");
 
 const ALLOWED_STATUSES = ["Delivered"];
 const ALLOWED_GROUP_BY = ["day", "week", "month"];
-const SUPPORTED_AI_INTENTS = [
-  "sales_summary",
-  "sales_change",
-  "best_selling_products",
-  "category_performance",
-  "customer_performance",
-  "peak_hours_days",
-  "operations_payment_summary",
-];
 
 const parseDate = (value) => {
   if (!value || typeof value !== "string") {
