@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getMyOrders } from "../services/orderService";
+import AiSidebar from "./AiSidebar";
 
 function Navbar() {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ function Navbar() {
 
   const [toast, setToast] = useState(null);
   const [toastTimeout, setToastTimeout] = useState(null);
+  const [isAiOpen, setIsAiOpen] = useState(false);
   const [orders, setOrders] = useState([]);
 
   // Global order status polling for customer notifications
@@ -306,9 +308,17 @@ function Navbar() {
 
                 <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
           {role === "admin" && (
-            <NavLink to="/admin/sales-analysis" className={getLinkClass} style={{ background: 'rgba(239, 68, 68, 0.08)' }}>
-              Sales Analysis
-            </NavLink>
+            <>
+              <NavLink to="/admin/sales-analysis" className={getLinkClass} style={{ background: 'rgba(239, 68, 68, 0.08)' }}>
+                Sales Analysis
+              </NavLink>
+              <button 
+                onClick={() => setIsAiOpen(true)} 
+                className="nav-link" 
+                style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'none', cursor: 'pointer' }}>
+                AI Business Analyst
+              </button>
+            </>
           )}
           <button onClick={logoutHandler} className="logout-btn">
             Logout
@@ -322,6 +332,8 @@ function Navbar() {
           <span className="global-toast-message">{toast.message}</span>
         </div>
       )}
+      
+      <AiSidebar isOpen={isAiOpen} onClose={() => setIsAiOpen(false)} />
     </>
   );
 }

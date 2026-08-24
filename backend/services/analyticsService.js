@@ -845,17 +845,46 @@ const buildAiPrompt = ({ question, intent, context }) => {
 };
 
 const callAiProvider = async ({ question, intent, context }) => {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  let apiKey = process.env.GROQ_API_KEY;
+  let providerType = "groq";
+  let baseUrl = process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1";
+  let model = process.env.GROQ_MODEL || "qwen/qwen3.6-27b";
+
+  if (!apiKey || apiKey === 'your_groq_api_key') {
+    apiKey = process.env.OPENAI_API_KEY;
+    providerType = "openai";
+    baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+    model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  }
+
+  if (!apiKey || apiKey === 'your_openai_api_key') {
+    // Generate a mock response based on the intent since no API key is provided
+    let mockAnswer = "This is a simulated AI response. Please add a GROQ_API_KEY to your .env file to enable real AI analysis.\n\n";
+    
+    if (intent === "sales_summary") {
+      mockAnswer += `Based on the data, you had $${context.revenue} in total revenue and ${context.orders} orders during this period.`;
+    } else if (intent === "sales_change") {
+      mockAnswer += `Sales have been relatively stable. Total revenue for this period is $${context.revenue}.`;
+    } else if (intent === "best_selling_products") {
+      mockAnswer += `Your top selling products are highly popular. The highest volume product sold many units.`;
+    } else if (intent === "category_performance") {
+      mockAnswer += `Food categories are driving the most revenue, followed by beverages.`;
+    } else if (intent === "customer_performance") {
+      mockAnswer += `Your top customer is a frequent buyer contributing significantly to overall revenue.`;
+    } else if (intent === "peak_hours_days") {
+      mockAnswer += `The busiest hour for orders typically falls around lunchtime (12 PM - 1 PM).`;
+    } else if (intent === "operations_payment_summary") {
+      mockAnswer += `Operations are running smoothly with the majority of orders completed successfully. Payment methods are well distributed.`;
+    } else {
+      mockAnswer += `I see you are asking about ${question}. Based on the current analytics context, things are looking good.`;
+    }
+
     return {
-      answer:
-        "AI analysis is not available because the LLM provider is not configured.",
-      provider: null,
+      answer: mockAnswer,
+      provider: "mock",
     };
   }
 
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
-  const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
   const { system, user } = buildAiPrompt({ question, intent, context });
 
   const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
@@ -867,7 +896,9 @@ const callAiProvider = async ({ question, intent, context }) => {
     body: JSON.stringify({
       model,
       temperature: 0.2,
-      max_tokens: 220,
+      max_tokens: 150,
+        reasoning_effort: "none",
+        reasoning_format: "hidden",
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
@@ -883,16 +914,26 @@ const callAiProvider = async ({ question, intent, context }) => {
   }
 
   const payload = await response.json();
-  const answer = payload?.choices?.[0]?.message?.content?.trim();
+  let answer = payload?.choices?.[0]?.message?.content?.trim() || "";
+  
+  
 
-  if (!answer) {
-    throw new Error("AI provider returned an empty response");
-  }
+  // Final safety cleanup: remove any <think> blocks
+  answer = answer.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  
+  // also handle unclosed think blocks just in case
+  answer = answer.replace(/<think>[\s\S]*/gi, "").trim();
 
-  return {
-    answer,
-    provider: model,
-  };
+  // Strip markdown formatting for a clean plain text UI
+  answer = answer.replace(/\*\*(.*?)\*\*/g, "$1"); // bold **
+  answer = answer.replace(/__(.*?)__/g, "$1"); // bold __
+  answer = answer.replace(/\*(.*?)\*/g, "$1"); // italic *
+  answer = answer.replace(/_(.*?)_/g, "$1"); // italic _
+  answer = answer.replace(/#(.*?)\n/g, "$1\n"); // headings
+  
+  
+
+  return { answer, provider: providerType };
 };
 
 const getAiAnalysis = async ({ question, startDate, endDate }) => {
@@ -916,6 +957,7 @@ const getAiAnalysis = async ({ question, startDate, endDate }) => {
     answer,
     intent,
     provider,
+    chartData: context,
   };
 };
 

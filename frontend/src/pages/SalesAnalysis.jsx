@@ -69,11 +69,7 @@ function SalesAnalysis() {
   const [operationsPaymentsData, setOperationsPaymentsData] = useState(null);
   const [operationsPaymentsLoading, setOperationsPaymentsLoading] = useState(false);
   const [operationsPaymentsError, setOperationsPaymentsError] = useState("");
-  const [aiQuestion, setAiQuestion] = useState("");
-  const [aiAnswer, setAiAnswer] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState("");
-  const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [submittedRange, setSubmittedRange] = useState(defaults);
 
@@ -209,37 +205,7 @@ function SalesAnalysis() {
     }
   };
 
-  const handleAskAi = async (question) => {
-    const query = typeof question === "string" ? question.trim() : aiQuestion.trim();
-
-    if (!query) {
-      setAiError("Please enter a question.");
-      setAiAnswer("");
-      return;
-    }
-
-    setAiLoading(true);
-    setAiError("");
-
-    try {
-      const response = await askAiAnalysis({
-        question: query,
-        startDate,
-        endDate,
-      });
-      setAiAnswer(response.answer || "");
-      setAiQuestion(query);
-    } catch (err) {
-      setAiError(
-        err.response?.data?.message ||
-          "Failed to generate AI analysis."
-      );
-      setAiAnswer("");
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
+  
   useEffect(() => {
     const timer = window.setTimeout(() => {
       fetchOverview(defaults);
@@ -1051,88 +1017,6 @@ function SalesAnalysis() {
                 </div>
             </>
           )}
-        </div>
-
-        <div className="trend-card">
-          <div className="trend-header">
-            <h2 className="trend-title">AI Business Analyst</h2>
-          </div>
-
-          <div style={{ display: "grid", gap: "14px" }}>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleAskAi();
-              }}
-              style={{ display: "grid", gap: "12px" }}
-            >
-              <div className="field" style={{ minWidth: 0 }}>
-                <label htmlFor="aiQuestion">Ask a question</label>
-                <textarea
-                  id="aiQuestion"
-                  value={aiQuestion}
-                  onChange={(e) => setAiQuestion(e.target.value)}
-                  rows={4}
-                  placeholder="Ask about sales, products, customers, peak hours, or operations."
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    borderRadius: "12px",
-                    border: "1px solid #cbd5e1",
-                    background: "#ffffff",
-                    color: "#0f172a",
-                    fontFamily: "inherit",
-                    boxSizing: "border-box",
-                    resize: "vertical",
-                  }}
-                />
-              </div>
-
-              <div className="trend-selector" style={{ flexWrap: "wrap" }}>
-                {exampleQuestions.map((question) => (
-                  <button
-                    key={question}
-                    type="button"
-                    onClick={() => {
-                      setAiQuestion(question);
-                      handleAskAi(question);
-                    }}
-                    style={{ fontSize: "12px" }}
-                  >
-                    {question}
-                  </button>
-                ))}
-              </div>
-
-              <button className="apply-btn" type="submit" disabled={aiLoading}>
-                {aiLoading ? "Thinking..." : "Ask"}
-              </button>
-            </form>
-
-            {aiLoading ? (
-              <div className="loading">Generating AI answer...</div>
-            ) : aiError ? (
-              <div className="error">{aiError}</div>
-            ) : aiAnswer ? (
-              <div
-                style={{
-                  background: "#ffffff",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "16px",
-                  padding: "18px",
-                  color: "#0f172a",
-                  lineHeight: 1.6,
-                  whiteSpace: "pre-wrap",
-                }}
-              >
-                {aiAnswer}
-              </div>
-            ) : (
-              <div className="empty" style={{ margin: 0 }}>
-                Ask a question to get a concise business answer from the current analytics data.
-              </div>
-            )}
-          </div>
         </div>
 
         <div className="trend-card">
