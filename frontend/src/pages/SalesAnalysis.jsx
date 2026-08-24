@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area, ComposedChart, Line } from "recharts";
 import Navbar from "../components/Navbar";
 import {
   getSalesOverview,
@@ -833,77 +834,79 @@ function SalesAnalysis() {
               </div>
 
               <div className="trend-grid">
-                <div className="trend-panel">
-                  <h3>Orders by Hour</h3>
-                  <div className="trend-bars" style={{ flexDirection: "column", alignItems: "stretch", minHeight: "auto" }}>
-                    {hourOrder.map((hour) => {
-                      const row = (timeData.hourly || []).find((item) => item.hour === hour) || { orders: 0 };
-                      const width = (Number(row.orders || 0) / maxHourlyOrders) * 100;
-                      return (
-                        <div key={`hour-orders-${hour}`} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <div style={{ width: "54px", color: "#475569", fontSize: "12px", fontWeight: 700 }}>
-                            {String(hour).padStart(2, "0")}:00
-                          </div>
-                          <div style={{ flex: 1, background: "#e2e8f0", borderRadius: "999px", overflow: "hidden" }}>
-                            <div style={{ width: `${Math.max(width, 3)}%`, background: "linear-gradient(90deg, #ef4444, #dc2626)", height: "16px", borderRadius: "999px" }} />
-                          </div>
-                          <div style={{ width: "28px", textAlign: "right", fontSize: "12px", color: "#0f172a", fontWeight: 700 }}>
-                            {formatNumber(row.orders || 0)}
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="trend-panel" style={{ height: '350px', display: 'flex', flexDirection: 'column' }}>
+                    <h3 style={{ marginBottom: '20px' }}>Orders by Hour</h3>
+                    <div style={{ flex: 1, minHeight: 0 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={hourOrder.map((hour) => ({
+                          hourLabel: `${String(hour).padStart(2, "0")}:00`,
+                          orders: Number(((timeData.hourly || []).find((item) => item.hour === hour) || {}).orders || 0)
+                        }))} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                          <XAxis dataKey="hourLabel" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} interval={2} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                          <Tooltip 
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                            formatter={(value) => [formatNumber(value), "Orders"]}
+                          />
+                          <Area type="monotone" dataKey="orders" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorOrders)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+  
+                  <div className="trend-panel" style={{ height: '350px', display: 'flex', flexDirection: 'column' }}>
+                    <h3 style={{ marginBottom: '20px' }}>Revenue by Hour</h3>
+                    <div style={{ flex: 1, minHeight: 0 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={hourOrder.map((hour) => ({
+                          hourLabel: `${String(hour).padStart(2, "0")}:00`,
+                          revenue: Number(((timeData.hourly || []).find((item) => item.hour === hour) || {}).revenue || 0)
+                        }))} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                          <XAxis dataKey="hourLabel" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} interval={2} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(val) => `?${val}`} />
+                          <Tooltip 
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                            formatter={(value) => [`₹${value}`, "Revenue"]}
+                          />
+                          <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </div>
 
-                <div className="trend-panel">
-                  <h3>Revenue by Hour</h3>
-                  <div className="trend-bars" style={{ flexDirection: "column", alignItems: "stretch", minHeight: "auto" }}>
-                    {hourOrder.map((hour) => {
-                      const row = (timeData.hourly || []).find((item) => item.hour === hour) || { revenue: 0 };
-                      const width = (Number(row.revenue || 0) / maxHourlyRevenue) * 100;
-                      return (
-                        <div key={`hour-revenue-${hour}`} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <div style={{ width: "54px", color: "#475569", fontSize: "12px", fontWeight: 700 }}>
-                            {String(hour).padStart(2, "0")}:00
-                          </div>
-                          <div style={{ flex: 1, background: "#e2e8f0", borderRadius: "999px", overflow: "hidden" }}>
-                            <div style={{ width: `${Math.max(width, 3)}%`, background: "linear-gradient(90deg, #10b981, #059669)", height: "16px", borderRadius: "999px" }} />
-                          </div>
-                          <div style={{ width: "72px", textAlign: "right", fontSize: "12px", color: "#0f172a", fontWeight: 700 }}>
-                            {formatCurrency(row.revenue || 0)}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div className="trend-panel" style={{ marginTop: "18px" }}>
-                <h3>Orders / Revenue by Day</h3>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr>
-                        <th style={tableHeadStyle}>Day</th>
-                        <th style={tableHeadStyle}>Orders</th>
-                        <th style={tableHeadStyle}>Revenue</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dayOrder.map((day) => {
-                        const row = getDayRow(day);
-                        return (
-                          <tr key={day}>
-                            <td style={tableCellStyle}>{day}</td>
-                            <td style={tableCellStyle}>{formatNumber(row.orders || 0)}</td>
-                            <td style={tableCellStyle}>{formatCurrency(row.revenue || 0)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+              <div className="trend-panel" style={{ marginTop: "18px", height: "400px", display: "flex", flexDirection: "column" }}>
+                <h3 style={{ marginBottom: "20px" }}>Orders & Revenue by Day</h3>
+                <div style={{ flex: 1, minHeight: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={dayOrder.map((day) => { const row = getDayRow(day); return { day, orders: Number(row.orders || 0), revenue: Number(row.revenue || 0) }; })} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                      <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                      <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(val) => `?${val}`} />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                        formatter={(value, name) => name === 'revenue' ? [`₹${value}`, "Revenue"] : [formatNumber(value), "Orders"]}
+                      />
+                      <Legend wrapperStyle={{ paddingTop: "20px" }} />
+                      <Bar yAxisId="left" dataKey="orders" name="Orders" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      <Line yAxisId="right" type="monotone" dataKey="revenue" name="Revenue" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </>
@@ -1011,35 +1014,41 @@ function SalesAnalysis() {
                 </div>
               </div>
 
-              <div className="trend-panel">
-                <h3>Revenue by Payment Method</h3>
-                <div style={{ overflowX: "auto" }}>
-                  {hasPaymentMethods ? (
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                      <thead>
-                        <tr>
-                          <th style={tableHeadStyle}>Method</th>
-                          <th style={tableHeadStyle}>Orders</th>
-                          <th style={tableHeadStyle}>Revenue</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(paymentsSummary?.byMethod || []).map((method) => (
-                          <tr key={method.method}>
-                            <td style={tableCellStyle}>{method.method}</td>
-                            <td style={tableCellStyle}>{formatNumber(method.orders)}</td>
-                            <td style={tableCellStyle}>{formatCurrency(method.revenue)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <div className="empty" style={{ margin: 0 }}>
-                      No payment-method data found for the selected range.
-                    </div>
-                  )}
+              <div className="trend-panel" style={{ marginTop: "18px", height: "350px", display: "flex", flexDirection: "column" }}>
+                  <h3 style={{ marginBottom: "20px" }}>Revenue by Payment Method</h3>
+                  <div style={{ flex: 1, minHeight: 0 }}>
+                    {hasPaymentMethods ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={paymentsSummary?.byMethod || []}
+                            dataKey="revenue"
+                            nameKey="method"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={100}
+                            innerRadius={50}
+                            paddingAngle={2}
+                            label={({ method, percent }) => percent > 0.05 ? `${method} (${(percent * 100).toFixed(0)}%)` : ''}
+                          >
+                            {(paymentsSummary?.byMethod || []).map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={['#6366f1', '#14b8a6', '#f59e0b', '#ec4899', '#8b5cf6'][index % 5]} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                            formatter={(value) => [`?${value}`, "Revenue"]}
+                          />
+                          <Legend verticalAlign="bottom" height={36}/>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="empty" style={{ margin: 0, height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        No payment-method data found for the selected range.
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
             </>
           )}
         </div>
@@ -1187,27 +1196,20 @@ function SalesAnalysis() {
                 </div>
               )}
 
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
-                      <th style={tableHeadStyle}>Customer</th>
-                      <th style={tableHeadStyle}>Orders</th>
-                      <th style={tableHeadStyle}>Total Spend</th>
-                      <th style={tableHeadStyle}>Average Order Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {customerData.map((customer) => (
-                      <tr key={customer.customerId}>
-                        <td style={tableCellStyle}>{customer.customerName}</td>
-                        <td style={tableCellStyle}>{formatNumber(customer.orders)}</td>
-                        <td style={tableCellStyle}>{formatCurrency(customer.totalSpend)}</td>
-                        <td style={tableCellStyle}>{formatCurrency(customer.averageOrderValue)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div style={{ height: "350px", marginTop: "20px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={customerData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
+                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(val) => `?${val}`} />
+                    <YAxis type="category" dataKey="customerName" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} width={100} />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                      formatter={(value, name) => name === 'totalSpend' ? [`₹${value}`, "Total Spend"] : [formatNumber(value), "Orders"]}
+                    />
+                    <Legend wrapperStyle={{ paddingTop: "10px" }} />
+                    <Bar dataKey="totalSpend" name="Total Spend" fill="#6366f1" radius={[0, 4, 4, 0]} maxBarSize={30} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </>
           )}
@@ -1248,29 +1250,31 @@ function SalesAnalysis() {
                 </div>
               </div>
 
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
-                      <th style={tableHeadStyle}>Category</th>
-                      <th style={tableHeadStyle}>Units Sold</th>
-                      <th style={tableHeadStyle}>Revenue</th>
-                      <th style={tableHeadStyle}>Revenue Contribution %</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {categoryData.map((category) => (
-                      <tr key={category.category}>
-                        <td style={tableCellStyle}>{category.category}</td>
-                        <td style={tableCellStyle}>{formatNumber(category.unitsSold)}</td>
-                        <td style={tableCellStyle}>{formatCurrency(category.revenue)}</td>
-                        <td style={tableCellStyle}>
-                          {formatPercent(category.revenueContributionPercent)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div style={{ height: "400px", marginTop: "20px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={categoryData}
+                      dataKey="revenue"
+                      nameKey="category"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={120}
+                      innerRadius={60}
+                      paddingAngle={2}
+                      label={({ category, percent }) => percent > 0.05 ? `${category} (${(percent * 100).toFixed(0)}%)` : ''}
+                    >
+                      {categoryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'][index % 5]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                      formatter={(value) => [`?${value}`, "Revenue"]}
+                    />
+                    <Legend verticalAlign="bottom" height={36}/>
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </>
           )}
@@ -1300,29 +1304,21 @@ function SalesAnalysis() {
           ) : productEmpty ? (
             <div className="empty">No product sales found for the selected range.</div>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    <th style={tableHeadStyle}>Product Name</th>
-                    <th style={tableHeadStyle}>Units Sold</th>
-                    <th style={tableHeadStyle}>Revenue</th>
-                    <th style={tableHeadStyle}>Revenue Contribution %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {productData.map((product) => (
-                    <tr key={product.productId}>
-                      <td style={tableCellStyle}>{product.productName}</td>
-                      <td style={tableCellStyle}>{formatNumber(product.unitsSold)}</td>
-                      <td style={tableCellStyle}>{formatCurrency(product.revenue)}</td>
-                      <td style={tableCellStyle}>
-                        {formatPercent(product.revenueContributionPercent)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div style={{ height: "350px", marginTop: "20px" }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={productData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
+                  <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(val) => `?${val}`} />
+                  <YAxis type="category" dataKey="productName" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} width={120} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                    formatter={(value, name) => name === 'revenue' ? [`₹${value}`, "Revenue"] : [formatNumber(value), "Units Sold"]}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: "10px" }} />
+                  <Bar dataKey="revenue" name="Revenue" fill="#f43f5e" radius={[0, 4, 4, 0]} maxBarSize={20} />
+                  <Bar dataKey="unitsSold" name="Units Sold" fill="#0ea5e9" radius={[0, 4, 4, 0]} maxBarSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           )}
         </div>

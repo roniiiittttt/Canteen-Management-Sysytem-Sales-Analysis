@@ -152,8 +152,7 @@ function Navbar() {
           }
 
           .logout-btn {
-            margin-left: auto;
-            background: linear-gradient(135deg, #ef4444, #dc2626);
+          background: linear-gradient(135deg, #ef4444, #dc2626);
             color: white;
             border: none;
             padding: 11px 22px;
@@ -271,9 +270,7 @@ function Navbar() {
               Payments
             </NavLink>
 
-            <NavLink to="/admin/sales-analysis" className={getLinkClass}>
-              Sales Analysis
-            </NavLink>
+            
 
             <NavLink to="/menu" className={getLinkClass}>
               Menu
@@ -307,9 +304,16 @@ function Navbar() {
           </>
         )}
 
-        <button onClick={logoutHandler} className="logout-btn">
-          Logout
-        </button>
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {role === "admin" && (
+            <NavLink to="/admin/sales-analysis" className={getLinkClass} style={{ background: 'rgba(239, 68, 68, 0.08)' }}>
+              Sales Analysis
+            </NavLink>
+          )}
+          <button onClick={logoutHandler} className="logout-btn">
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Floating Global Toast Notification */}
