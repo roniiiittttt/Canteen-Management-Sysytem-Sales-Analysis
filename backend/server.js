@@ -18,7 +18,26 @@ connectDB();
 
 const app = express();
 
-app.use(cors());
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigin = process.env.FRONTEND_URL;
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (origin === allowedOrigin) {
+      return callback(null, true);
+    }
+    
+    // Allow localhost in development
+    if (process.env.NODE_ENV !== "production" && /^http:\/\/localhost(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+    
+    callback(new Error("Not allowed by CORS"));
+  },
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Routes
