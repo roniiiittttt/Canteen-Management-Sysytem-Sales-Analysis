@@ -844,6 +844,9 @@ const buildAiPrompt = ({ question, intent, context }) => {
   };
 };
 
+let groqDailyRequestCount = 0;
+let groqRequestCountDate = new Date().toDateString();
+
 const callAiProvider = async ({ question, intent, context }) => {
   let apiKey = process.env.GROQ_API_KEY;
   let providerType = "groq";
@@ -855,6 +858,23 @@ const callAiProvider = async ({ question, intent, context }) => {
     providerType = "openai";
     baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
     model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  } else {
+    const today = new Date().toDateString();
+    if (groqRequestCountDate !== today) {
+      groqRequestCountDate = today;
+      groqDailyRequestCount = 0;
+    }
+
+    const limit = parseInt(process.env.GROQ_DAILY_REQUEST_LIMIT, 10) || 900;
+
+    if (groqDailyRequestCount >= limit) {
+      return {
+        answer: "The daily AI usage limit has been reached. Please try again later.",
+        provider: providerType
+      };
+    }
+
+    groqDailyRequestCount++;
   }
 
   if (!apiKey || apiKey === 'your_openai_api_key') {
