@@ -1,5 +1,5 @@
-const User = require("../models/User");
-const Menu = require("../models/Menu");
+const User = require("../models/user");
+const Menu = require("../models/menu");
 const Order = require("../models/Order");
 const Table = require("../models/Table");
 
